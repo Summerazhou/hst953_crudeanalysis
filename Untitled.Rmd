@@ -1,0 +1,564 @@
+---
+title: "hst953_crude"
+author: "Summera"
+date: "10/17/2018"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+
+mydata <- read.csv("~/Downloads/Trauma_Hyperoxemia_v1-1.csv")
+
+```
+
+* How many trauma patients do we have?
+``` {r}
+count(mydata)
+```
+6736 trauma patients in total
+
+* How many trauma patients have PaO2 measured during the first 24hr?
+```{r, warning=FALSE}
+count(mydata, is.na(mean_pao2_24hr))
+```
+2024 trauma patients have PaO2 measured during the first 24hr
+
+* How many trauma patients have SpO2 measured during the first 24hr?
+```{r}
+count(mydata, is.na(mean_spo2_24hr))
+```
+3517 trauma patients have SpO2 measured during the first 24hr
+
+## PaO2 and 48hr outcome 
+* dichotomize mean_PaO2 during 24 hr into high and low ;
+
+* limit the cohort to patients who have mean_pao2_24hr measured and have at least 2 days of stay
+
+```{r, warning=FALSE}
+pao2_48hr <- mydata %>%
+  filter(!is.na(mydata$mean_pao2_24hr), los >= 2) %>%
+  mutate(pao2_level = 
+           ifelse(mean_pao2_24hr >= mean(mean_pao2_24hr, na.rm=TRUE), 1,0))
+count(pao2_48hr)
+```
+1451 patients were selected 
+
+**PaO2 and creatine level**
+
+create variable for creatinine change after 24 hours and 48 hours 
+```{r}
+pao2_48hr <- pao2_48hr %>%
+  mutate(creat_change_24hr = mean_creatinine_24hr - admcreat,
+         creat_change_2day = mean_creatinine_day2 - admcreat,
+         creat_increase_24hr = ifelse(creat_change_24hr > 0, 1, 0),
+         creat_increase_2day = ifelse(creat_change_2day > 0, 1, 0))
+```
+
+**24hr creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_24hr ~ pao2_level, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_24hr ~ pao2_level + age + gender + surg, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_24hr ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+**48hr creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_2day ~ pao2_level, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_2day ~ pao2_level + age + gender + surg, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_2day ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+**PaO2 and aki**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = aki_48hr ~ pao2_level, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = aki_48hr ~ pao2_level + age + gender + surg, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = aki_48hr ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_48hr,
+            family = binomial))
+```
+
+## SpO2 and 48hr outcome
+
+* dichotomize mean_SpO2 during 24hr into high and low 
+
+* limit the cohort to patients who have mean_SpO2_24hr measured and have at least 2 days of stay
+```{r}
+spo2_48hr <- mydata %>%
+  filter(!is.na(mydata$mean_spo2_24hr), los >= 2) %>%
+  mutate(spo2_level = 
+           ifelse(mean_spo2_24hr >= median(mean_spo2_24hr, na.rm=TRUE), 1,0))
+count(spo2_48hr)
+```
+1942 patients were selected
+
+**SpO2 and creatine level**
+* create variable for creatinine change after 24 hours, 48 hours 
+```{r}
+spo2_48hr <- spo2_48hr %>%
+  mutate(creat_change_24hr = mean_creatinine_24hr - admcreat,
+         creat_change_2day = mean_creatinine_day2 - admcreat,
+         creat_increase_24hr = ifelse(creat_change_24hr > 0, 1, 0),
+         creat_increase_2day = ifelse(creat_change_2day > 0, 1, 0))
+```
+**24hr creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_24hr ~ spo2_level, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_24hr ~ spo2_level + age + gender + surg, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_24hr ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_48hr,
+            family = binomial))
+```
+**48hr creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_2day ~ spo2_level, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_2day ~ spo2_level + age + gender + surg, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_2day ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+**PaO2 and aki**
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = aki_48hr ~ spo2_level, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = aki_48hr ~ spo2_level + age + gender + surg, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = aki_48hr ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_48hr,
+            family = binomial))
+```
+
+# 7day outcome 
+
+**PaO2**
+
+* limit the cohort to patients who have mean_pao2_24hr measured and have at least 7 days of stay
+```{r}
+pao2_7day <- mydata %>%
+  filter(!is.na(mydata$mean_pao2_24hr), los >= 7) %>%
+  mutate(pao2_level = 
+           ifelse(mean_pao2_24hr >= mean(mean_pao2_24hr, na.rm=TRUE), 1,0))
+count(pao2_7day)
+```
+620 patients selected
+
+* create variable for creatinine change after 24 hours, 48 hours 
+```{r}
+pao2_7day <- pao2_7day %>%
+  mutate(creat_change_7day = mean_creatinine_day7 - admcreat,
+         creat_increase_7day = ifelse(creat_change_7day > 0, 1, 0))
+```
+
+**PaO2 with 7 day creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_7day ~ pao2_level, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_7day ~ pao2_level + age + gender + surg, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_7day ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+**PaO2 and 7 day aki**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = aki_7day ~ pao2_level, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = aki_7day ~ pao2_level + age + gender + surg, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = aki_7day ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_7day,
+            family = binomial))
+```
+
+**SpO2**
+
+* limit the cohort to patients who have mean_spo2_24hr measured and have at least 7 days of stay
+```{r}
+spo2_7day <- mydata %>%
+  filter(!is.na(mydata$mean_spo2_24hr), los >= 7) %>%
+  mutate(spo2_level = 
+           ifelse(mean_spo2_24hr >= median(mean_spo2_24hr, na.rm=TRUE), 1,0))
+count(spo2_7day)
+```
+686 patients selected
+
+* create variable for creatinine change after 24 hours, 48 hours 
+```{r}
+spo2_7day <- spo2_7day %>%
+  mutate(creat_change_7day = mean_creatinine_day7 - admcreat,
+         creat_increase_7day = ifelse(creat_change_7day > 0, 1, 0))
+```
+
+**SaO2 with 7 day creatinine**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = creat_increase_7day ~ spo2_level, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = creat_increase_7day ~ spo2_level + age + gender + surg, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = creat_increase_7day ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+**SpO2 and 7 day aki**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = aki_7day ~ spo2_level, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = aki_7day ~ spo2_level + age + gender + surg, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = aki_7day ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_7day,
+            family = binomial))
+```
+
+# mortality
+
+**PaO2**
+
+* limit the cohort to patients who have mean_pao2_24hr measured and have at least 1 days of stay
+```{r}
+pao2_mortality <- mydata %>%
+  filter(!is.na(mydata$mean_pao2_24hr), los >= 1) %>%
+  mutate(pao2_level = 
+           ifelse(mean_pao2_24hr >= mean(mean_pao2_24hr, na.rm=TRUE), 1,0))
+count(pao2_mortality)
+```
+1838 patients were selected
+
+**icu mortality**
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = icu_mortality ~ pao2_level, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = icu_mortality ~ pao2_level + age + gender + surg, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = icu_mortality ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+**hospital mortality**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospital_mortality ~ pao2_level, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospital_mortality ~ pao2_level + age + gender + surg, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospital_mortality ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+**hospital mortality 30 day**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospmort30day ~ pao2_level, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospmort30day ~ pao2_level + age + gender + surg, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospmort30day ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+**hospital mortality 1 year**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospmort1yr ~ pao2_level, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospmort1yr ~ pao2_level + age + gender + surg, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospmort1yr ~ pao2_level + age + gender + surg + admcreat, 
+            data = pao2_mortality,
+            family = binomial))
+```
+
+**SpO2**
+
+* limit the cohort to patients who have mean_spo2_24hr measured and have at least 1 days of stay
+```{r}
+spo2_mortality <- mydata %>%
+  filter(!is.na(mydata$mean_spo2_24hr), los >= 1) %>%
+  mutate(spo2_level = 
+           ifelse(mean_spo2_24hr >= median(mean_spo2_24hr, na.rm=TRUE), 1,0))
+count(spo2_mortality)
+```
+2924 patients were selected
+
+**icu mortality**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = icu_mortality ~ spo2_level, 
+            data = spo2_mortality,
+            family = binomial)) 
+```
+
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = icu_mortality ~ spo2_level + age + gender + surg, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = icu_mortality ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+**hospital mortality**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospital_mortality ~ spo2_level, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospital_mortality ~ spo2_level + age + gender + surg, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospital_mortality ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+**hospital mortality 30 day**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospmort30day ~ spo2_level, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospmort30day ~ spo2_level + age + gender + surg, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospmort30day ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+**hospital mortality 1 year**
+
+* unadjusted logistic regression 
+```{r}
+summary(glm(formula = hospmort1yr ~ spo2_level, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* adjust for age, gender and surgery 
+```{r}
+summary(glm(formula = hospmort1yr ~ spo2_level + age + gender + surg, 
+            data = spo2_mortality,
+            family = binomial))
+```
+
+* further adjust for initial creatinine level
+```{r}
+summary(glm(formula = hospmort1yr ~ spo2_level + age + gender + surg + admcreat, 
+            data = spo2_mortality,
+            family = binomial))
+```
